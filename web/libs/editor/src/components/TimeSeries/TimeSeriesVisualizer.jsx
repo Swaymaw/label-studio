@@ -699,6 +699,7 @@ class TimeSeriesVisualizerD3 extends React.Component {
     const height = this.height;
 
     const channel = (this.channels[column] = { id: item.id, units: item.units });
+    const curve = d3[item.interpolation] || d3.curvestep;
 
     let { series } = this.props;
 
@@ -749,12 +750,14 @@ class TimeSeriesVisualizerD3 extends React.Component {
     // max scale line
     channel.line = d3
       .line()
+      .curve(curve)
       .y((d) => channel.plotY(d[column]))
       .x((d) => channel.plotX(d[time]));
 
     // line that has representation only on the current range
     channel.lineSlice = d3
       .line()
+      .curve(curve)
       .defined((d) => d[time] >= range[0] && d[time] <= range[1])
       .y((d) => channel.y(d[column]))
       .x((d) => channel.x(d[time]));
@@ -961,6 +964,28 @@ class TimeSeriesVisualizerD3 extends React.Component {
     const cursorChanged = this.props.cursorTime !== prevProps.cursorTime;
     if (cursorChanged || width !== prevState.width || flushBrushes) {
       this.updatePlayhead(this.props.cursorTime);
+    }
+    for (const channelItem of this.channels) {
+      const prev = prevProps.channels.find((c) => c.id === channelItem.id);
+      if (prev && prev.interpolation !== channelItem.interpolation) {
+        const column = channelItem.columnName;
+        const channel = this.channels[column]
+
+        if (channel) {
+          const curve = d3[channelItem.interpolation] || d3.curvestep;
+          channel.line.curve(curve)
+          channel.lineSlice.curve(curve)
+
+          if (channel.useOptimizedData) {
+            channel.path.attr("d", channel.line);
+            channel.path2.attr("d", "");
+          } else {
+            channel.path.attr("d", channel.lineSlice);
+            channel.path2.attr("d", "");
+          }
+        }
+        channel.setRangeWithScaling(channelItem.props.range)
+      }
     }
 
     this.updateTracker(this.x(this.trackerX));

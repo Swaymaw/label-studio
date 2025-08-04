@@ -45,7 +45,7 @@ import { getCurrentTheme } from "@humansignal/ui";
  */
 
 const csMap = {
-  curvebasis: "curvebasis",
+  curvebasis: "curveBasis",
   curvebasisopen: "curveBasisOpen",
   curvebundle: "curveBundle",
   curvecardinal: "curveCardinal",
@@ -107,7 +107,7 @@ const Model = types
       return column;
     },
     get series() {
-      return item.parent?.dataHash;
+      return self.parent?.dataHash;
     },
     get margin() {
       return self.parent?.margin;
@@ -632,13 +632,17 @@ class ChannelD3 extends React.Component {
     this.plotX = x.copy();
     this.stick = stick;
 
+    const curve = d3[item.interpolation] || d3.curvestep;
+
     this.line = d3
       .line()
+      .curve(curve)
       .y((d) => this.y(d[column]))
       .x((d) => this.plotX(d[time]));
 
     this.lineSlice = d3
       .line()
+      .curve(curve)
       .defined((d) => d[time] >= range[0] && d[time] <= range[1])
       .y((d) => this.y(d[column]))
       .x((d) => this.x(d[time]));
@@ -851,6 +855,14 @@ class ChannelD3 extends React.Component {
     const cursorChanged = this.props.cursorTime !== prevProps.cursorTime;
     if (cursorChanged || width !== prevState.width || flushBrushes) {
       this.updatePlayhead(this.props.cursorTime);
+    }
+
+    if (prevProps.item.interpolation !== this.props.item.interpolation) {
+      const curve = d3[this.props.item.interpolation] || d3.curvestep
+      this.line.curve(curve);
+      this.lineSlice.curve(curve);
+
+      this.setRangeWithScaling(this.props.range)
     }
   }
 
